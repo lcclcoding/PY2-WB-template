@@ -1,0 +1,30 @@
+name: Exercises Doctests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  doctest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Run exercises Doctest
+        working-directory: submitted
+        run: |
+          overall_exit_code=0
+          for file in $(find . -maxdepth 1 -name "ex*.py" | sort -V); do
+            echo "Running doctest on $file"
+            python3 -m doctest $file || overall_exit_code=1
+          done
+          exit $overall_exit_code

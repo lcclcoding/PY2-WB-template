@@ -1,0 +1,1 @@
+This folder contains the PDF files / notes for the exercises.

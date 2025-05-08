@@ -1,0 +1,1 @@
+This folder contains the template code for each exercise
