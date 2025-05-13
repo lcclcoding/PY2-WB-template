@@ -68,15 +68,6 @@ jobs:
           echo "Passed: ${#passed_files[@]}"
           echo "Failed: ${#failed_files[@]}"
           
-          # List all failed files if any
-          if [ ${#failed_files[@]} -gt 0 ]; then
-            echo ""
-            echo "❌ FAILED FILES"
-            echo "------------------------------------------------"
-            for f in "${failed_files[@]}"; do
-              echo "- $f"
-            done
-          fi
           
           # List all passed files if any
           if [ ${#passed_files[@]} -gt 0 ]; then
@@ -84,6 +75,16 @@ jobs:
             echo "✅ PASSED FILES"
             echo "------------------------------------------------"
             for f in "${passed_files[@]}"; do
+              echo "- $f"
+            done
+          fi
+
+          # List all failed files if any
+          if [ ${#failed_files[@]} -gt 0 ]; then
+            echo ""
+            echo "❌ FAILED FILES"
+            echo "------------------------------------------------"
+            for f in "${failed_files[@]}"; do
               echo "- $f"
             done
           fi
