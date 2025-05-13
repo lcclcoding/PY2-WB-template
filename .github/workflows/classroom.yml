@@ -1,4 +1,4 @@
-name: Exercise Autograding
+name: GitHub Classroom Workflow
 
 on:
   push:
@@ -27,31 +27,92 @@ jobs:
         with:
           python-version: 3.12
 
-      - name: Run Python Doctests
-        id: python-tests
-        working-directory: exercises
+      - name: Create doctest runner script
         run: |
-          failed_tests=()
-          echo "Running Python Doctests..."
-          for file in $(find . -maxdepth 1 -name "ex*.py" | sort -V); do
-            if ! python3 -m doctest $file; then
-              failed_tests+=("$file")
+          cat > run_doctests.sh << 'EOF'
+          #!/bin/bash
+
+          cd exercises/
+
+          overall_exit_code=0
+          echo "Running doctests in $(pwd)"
+          files=$(find . -maxdepth 1 -name "ex*.py" | sort -V)
+          if [ -z "$files" ]; then
+            echo "WARNING: No Python files found matching ex*.py"
+            exit 1
+          fi
+          
+          # Arrays to track results
+          declare -a failed_files
+          declare -a passed_files
+          
+          # Process each file
+          for file in $files; do
+            echo "Running doctest on $file"
+            if python3 -m doctest $file; then
+              passed_files+=("$file")
+              echo "✅ PASS: $file"
+            else
+              failed_files+=("$file")
+              overall_exit_code=1
+              echo "❌ FAIL: $file"
             fi
           done
           
-          # Only report if there are failures
-          if [ ${#failed_tests[@]} -ne 0 ]; then
-            echo "The following tests failed:"
-            printf '%s\n' "${failed_tests[@]}"
-            echo "failed_tests=${failed_tests[*]}" >> $GITHUB_OUTPUT
-            exit 1
-          else
-            echo "All tests passed!"
-            exit 0
+          # Summary report
+          total_files=${#passed_files[@]}+${#failed_files[@]}
+          echo "=================================================="
+          echo "🧪 DOCTEST SUMMARY"
+          echo "=================================================="
+          echo "Total files tested: $total_files"
+          echo "Passed: ${#passed_files[@]}"
+          echo "Failed: ${#failed_files[@]}"
+          
+          # List all failed files if any
+          if [ ${#failed_files[@]} -gt 0 ]; then
+            echo ""
+            echo "❌ FAILED FILES"
+            echo "------------------------------------------------"
+            for f in "${failed_files[@]}"; do
+              echo "- $f"
+            done
           fi
+          
+          # List all passed files if any
+          if [ ${#passed_files[@]} -gt 0 ]; then
+            echo ""
+            echo "✅ PASSED FILES"
+            echo "------------------------------------------------"
+            for f in "${passed_files[@]}"; do
+              echo "- $f"
+            done
+          fi
+          
+          echo ""
+          if [ $overall_exit_code -eq 0 ]; then
+            echo "🎉 All tests passed!"
+          else
+            echo "⚠️ Some tests failed. See details above."
+          fi
+          
+          exit $overall_exit_code
+          EOF
+          
+          chmod +x run_doctests.sh
 
-      - name: Report Failed Tests
-        if: failure()
+      - name: Python Doctests
+        id: doctest
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: Python Doctests
+          setup-command: ""
+          command: ./run_doctests.sh
+          timeout: 10
+          max-score: 1
+
+      - name: Report Grading Results
         uses: classroom-resources/autograding-grading-reporter@v1
         env:
-          FAILED_PYTHON_TESTS: ${{ steps.python-tests.outputs.failed_tests }}
+          DOCTEST_RESULTS: ${{ steps.doctest.outputs.result }}
+        with:
+          runners: doctest
