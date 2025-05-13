@@ -1,0 +1,57 @@
+name: Exercise Autograding
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+  repository_dispatch:
+
+permissions:
+  checks: write
+  actions: read
+  contents: read
+
+jobs:
+  build:
+    name: Autograding
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.12
+
+      - name: Run Python Doctests
+        id: python-tests
+        working-directory: exercises
+        run: |
+          failed_tests=()
+          echo "Running Python Doctests..."
+          for file in $(find . -maxdepth 1 -name "ex*.py" | sort -V); do
+            if ! python3 -m doctest $file; then
+              failed_tests+=("$file")
+            fi
+          done
+          
+          # Only report if there are failures
+          if [ ${#failed_tests[@]} -ne 0 ]; then
+            echo "The following tests failed:"
+            printf '%s\n' "${failed_tests[@]}"
+            echo "failed_tests=${failed_tests[*]}" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "All tests passed!"
+            exit 0
+          fi
+
+      - name: Report Failed Tests
+        if: failure()
+        uses: classroom-resources/autograding-grading-reporter@v1
+        env:
+          FAILED_PYTHON_TESTS: ${{ steps.python-tests.outputs.failed_tests }}
